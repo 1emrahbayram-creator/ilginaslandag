@@ -181,9 +181,15 @@ function esc(s) {
   return d.innerHTML;
 }
 
+// Arama için normalizasyon: Türkçe ı/i ayrımını ve aksanları katlar,
+// böylece "bist" → "BIST", "altin" → "altın" eşleşir.
+function normText(s) {
+  return s.toLocaleLowerCase("tr").replace(/ı/g, "i").normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+}
+
 function updateCounts() {
-  const q = state.q.toLocaleLowerCase("tr");
-  const matches = a => (!q || (a.title + " " + a.description + " " + a.source).toLocaleLowerCase("tr").includes(q));
+  const q = normText(state.q);
+  const matches = a => (!q || normText(a.title + " " + a.description + " " + a.source).includes(q));
   const catCounts = { all: 0 }, regCounts = { all: 0 };
   for (const a of allArticles) {
     if (!matches(a)) continue;
@@ -202,11 +208,11 @@ function updateCounts() {
 
 function render() {
   updateCounts();
-  const q = state.q.toLocaleLowerCase("tr");
+  const q = normText(state.q);
   const list = allArticles.filter(a =>
     (state.cat === "all" || a.category === state.cat) &&
     (state.region === "all" || a.region === state.region) &&
-    (!q || (a.title + " " + a.description + " " + a.source).toLocaleLowerCase("tr").includes(q))
+    (!q || normText(a.title + " " + a.description + " " + a.source).includes(q))
   );
   const el = document.getElementById("content");
   if (!list.length) {

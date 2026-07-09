@@ -91,7 +91,8 @@ function decodeEntities(s) {
 }
 
 function stripHtml(s) {
-  return decodeEntities(stripCdata(s)).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  // Bazı kaynaklar entity'leri çift kodlar (&amp;#39; gibi) — iki geçişte çöz.
+  return decodeEntities(decodeEntities(stripCdata(s))).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function pickTag(block, tags) {
@@ -120,7 +121,13 @@ function parseFeed(xml) {
     if (!link || link.startsWith("<")) link = pickAtomLink(block);
     link = decodeEntities(link);
     const dateRaw = pickTag(block, ["pubDate", "published", "updated", "dc:date"]);
-    const desc = stripHtml(pickTag(block, ["description", "summary", "content:encoded", "content"])).slice(0, 300);
+    let desc = stripHtml(pickTag(block, ["description", "summary", "content:encoded", "content"])).slice(0, 300);
+    // Açıklama başlığın kopyasıysa ve kayda değer ek bilgi içermiyorsa gösterme
+    // (Google News açıklamaları başlık + kaynak adından ibarettir).
+    const fold = (x) => x.toLocaleLowerCase("tr").replace(/[^\p{L}\p{N}]+/gu, "");
+    const nt = fold(title);
+    const nd = fold(desc);
+    if (nd && nd.length <= nt.length + 40 && (nd.startsWith(nt.slice(0, 60)) || nt.startsWith(nd))) desc = "";
     const date = dateRaw ? new Date(dateRaw) : null;
     items.push({
       title,
