@@ -1,0 +1,4 @@
+# Actions her çalıştırmada taze üretir; repo'da tutulmaz
+public/news.json
+.DS_Store
+*.log

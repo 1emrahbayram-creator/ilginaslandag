@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Borsa Haber Merkezi</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #2a3240;
+    --text: #e6edf3;
+    --muted: #8b98a9;
+    --accent: #d4a017;
+    --accent2: #3b82f6;
+    --green: #22c55e;
+    --red: #ef4444;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(13,17,23,.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+  }
+  .header-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 700; white-space: nowrap; }
+  h1 .gold { color: var(--accent); }
+  .meta { color: var(--muted); font-size: 12px; }
+  .spacer { flex: 1; }
+  #search {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 240px; outline: none;
+  }
+  #search:focus { border-color: var(--accent2); }
+  button.refresh {
+    background: var(--accent); color: #1a1200; border: none; border-radius: 8px;
+    padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button.refresh:hover { filter: brightness(1.1); }
+  button.refresh:disabled { opacity: .5; cursor: wait; }
+
+  .filters { max-width: 1400px; margin: 10px auto 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip {
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 999px; padding: 5px 14px; font-size: 13px; cursor: pointer; user-select: none;
+    transition: all .15s;
+  }
+  .chip:hover { color: var(--text); border-color: var(--muted); }
+  .chip.active { background: var(--accent); color: #1a1200; border-color: var(--accent); font-weight: 600; }
+  .chip.region.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+  main { max-width: 1400px; margin: 20px auto; padding: 0 24px 60px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 8px;
+    transition: border-color .15s, transform .15s; cursor: pointer; text-decoration: none; color: inherit;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card-top { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
+  .badge {
+    padding: 2px 8px; border-radius: 5px; font-weight: 600; letter-spacing: .2px;
+    background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .badge.cat-altin  { color: var(--accent);  border-color: rgba(212,160,23,.4); }
+  .badge.cat-borsa  { color: var(--accent2); border-color: rgba(59,130,246,.4); }
+  .badge.cat-doviz  { color: var(--green);   border-color: rgba(34,197,94,.4); }
+  .badge.cat-kripto { color: #a78bfa;        border-color: rgba(167,139,250,.4); }
+  .badge.cat-ekonomi{ color: #f97316;        border-color: rgba(249,115,22,.4); }
+  .time { color: var(--muted); margin-left: auto; white-space: nowrap; }
+  .card h2 { font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .card p { font-size: 13px; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .source { font-size: 12px; color: var(--accent); font-weight: 500; margin-top: auto; }
+
+  .status-bar {
+    max-width: 1400px; margin: 0 auto 16px; padding: 0 24px;
+    font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .status-bar .src { display: inline-flex; align-items: center; gap: 4px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot.ok { background: var(--green); }
+  .dot.fail { background: var(--red); }
+
+  .empty { text-align: center; color: var(--muted); padding: 80px 0; font-size: 15px; }
+  .loading { text-align: center; padding: 80px 0; color: var(--muted); }
+  .spinner {
+    width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; margin: 0 auto 16px; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    #search { width: 100%; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <h1>📈 Borsa <span class="gold">Haber</span> Merkezi</h1>
+    <span class="meta" id="updated"></span>
+    <div class="spacer"></div>
+    <input id="search" type="search" placeholder="Haberlerde ara… (ör. altın, BIST, Fed)">
+    <button class="refresh" id="refreshBtn">Yenile</button>
+  </div>
+  <div class="filters" id="catFilters">
+    <span class="chip active" data-cat="all">Tümü</span>
+    <span class="chip" data-cat="borsa">📊 Borsa</span>
+    <span class="chip" data-cat="altin">🥇 Altın &amp; Emtia</span>
+    <span class="chip" data-cat="doviz">💵 Döviz</span>
+    <span class="chip" data-cat="ekonomi">🏦 Ekonomi</span>
+    <span class="chip" data-cat="kripto">🪙 Kripto</span>
+    <span class="sep"></span>
+    <span class="chip region active" data-region="all">🌍 Hepsi</span>
+    <span class="chip region" data-region="tr">🇹🇷 Türkiye</span>
+    <span class="chip region" data-region="global">🌐 Dünya</span>
+  </div>
+</header>
+
+<main>
+  <div id="content"><div class="loading"><div class="spinner"></div>Haberler yükleniyor…</div></div>
+</main>
+<div class="status-bar" id="statusBar"></div>
+
+<script>
+let allArticles = [];
+let state = { cat: "all", region: "all", q: "" };
+
+const CAT_LABELS = { altin: "Altın", borsa: "Borsa", doviz: "Döviz", kripto: "Kripto", ekonomi: "Ekonomi" };
+
+function timeAgo(iso) {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return "az önce";
+  if (s < 3600) return Math.floor(s / 60) + " dk önce";
+  if (s < 86400) return Math.floor(s / 3600) + " sa önce";
+  return Math.floor(s / 86400) + " gün önce";
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function render() {
+  const q = state.q.toLocaleLowerCase("tr");
+  const list = allArticles.filter(a =>
+    (state.cat === "all" || a.category === state.cat) &&
+    (state.region === "all" || a.region === state.region) &&
+    (!q || (a.title + " " + a.description + " " + a.source).toLocaleLowerCase("tr").includes(q))
+  );
+  const el = document.getElementById("content");
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">Bu filtreyle eşleşen haber yok.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="grid">' + list.map(a => `
+    <a class="card" href="${esc(a.link)}" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="badge cat-${esc(a.category)}">${CAT_LABELS[a.category] || esc(a.category)}</span>
+        <span class="badge">${a.region === "tr" ? "🇹🇷" : "🌐"}</span>
+        <span class="time">${timeAgo(a.date)}</span>
+      </div>
+      <h2>${esc(a.title)}</h2>
+      ${a.description ? `<p>${esc(a.description)}</p>` : ""}
+      <div class="source">${esc(a.source)}</div>
+    </a>`).join("") + "</div>";
+}
+
+function renderStatus(sources) {
+  document.getElementById("statusBar").innerHTML =
+    "<strong>Kaynaklar:</strong> " + sources.map(s =>
+      `<span class="src" title="${s.error ? esc(s.error) : s.count + " haber"}">
+        <span class="dot ${s.ok && s.count ? "ok" : "fail"}"></span>${esc(s.name)}</span>`
+    ).join("");
+}
+
+async function load(force) {
+  const btn = document.getElementById("refreshBtn");
+  btn.disabled = true; btn.textContent = "Yükleniyor…";
+  try {
+    // Önce yerel sunucu API'sini dene; statik yayında (GitHub Pages) news.json'a düş.
+    let res;
+    try {
+      res = await fetch("/api/news" + (force ? "?refresh=1" : ""));
+      if (!res.ok) throw new Error("api yok");
+    } catch {
+      res = await fetch("news.json?t=" + Date.now());
+    }
+    const data = await res.json();
+    allArticles = data.articles || [];
+    document.getElementById("updated").textContent =
+      "Son güncelleme: " + new Date(data.updatedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) +
+      " · " + allArticles.length + " haber";
+    renderStatus(data.sources || []);
+    render();
+  } catch (e) {
+    document.getElementById("content").innerHTML =
+      '<div class="empty">Haberler alınamadı: ' + esc(e.message) + "</div>";
+  } finally {
+    btn.disabled = false; btn.textContent = "Yenile";
+  }
+}
+
+document.getElementById("catFilters").addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  if (chip.dataset.cat) {
+    state.cat = chip.dataset.cat;
+    document.querySelectorAll(".chip[data-cat]").forEach(c => c.classList.toggle("active", c === chip));
+  } else if (chip.dataset.region) {
+    state.region = chip.dataset.region;
+    document.querySelectorAll(".chip[data-region]").forEach(c => c.classList.toggle("active", c === chip));
+  }
+  render();
+});
+
+let searchTimer;
+document.getElementById("search").addEventListener("input", (e) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { state.q = e.target.value.trim(); render(); }, 200);
+});
+
+document.getElementById("refreshBtn").addEventListener("click", () => load(true));
+
+load();
+setInterval(() => load(false), 5 * 60 * 1000); // 5 dakikada bir otomatik yenile
+</script>
+</body>
+</html>
