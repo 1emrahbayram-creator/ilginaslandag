@@ -121,7 +121,7 @@ function parseFeed(xml) {
     let link = stripCdata(pickTag(block, ["link"])).trim();
     if (!link || link.startsWith("<")) link = pickAtomLink(block);
     link = decodeEntities(link);
-    const dateRaw = pickTag(block, ["pubDate", "published", "updated", "dc:date"]);
+    const dateRaw = stripCdata(pickTag(block, ["pubDate", "published", "updated", "dc:date"])).trim();
     let desc = stripHtml(pickTag(block, ["description", "summary", "content:encoded", "content"])).slice(0, 300);
     // Açıklama başlığın kopyasıysa ve kayda değer ek bilgi içermiyorsa gösterme
     // (Google News açıklamaları başlık + kaynak adından ibarettir).

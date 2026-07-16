@@ -29,7 +29,16 @@ const norm = (t) => t.toLocaleLowerCase("tr").replace(/[^a-z0-9ğüşöçıi]+/g
   }
 
   const seen = new Set(baseline.articles.map((a) => norm(a.title)));
-  const yeni = fresh.articles.filter((a) => !seen.has(norm(a.title)));
+  // Yalnızca son 24 saatte yayınlanan haberler bildirim tetikler. Bir kaynak
+  // geçici düşüp toparladığında eski haberler baseline'dan çıkıp geri gelse bile
+  // (ya da tarihsiz bir öğe "şu an" damgası alsa bile) eskiyi "yeni" diye pushlamaz.
+  const TAZE_MS = 24 * 60 * 60 * 1000;
+  const simdi = Date.now();
+  const yeni = fresh.articles.filter((a) => {
+    if (seen.has(norm(a.title))) return false;
+    const t = a.date ? new Date(a.date).getTime() : NaN;
+    return !isNaN(t) && simdi - t <= TAZE_MS;
+  });
   if (!yeni.length) {
     console.log("Yeni haber yok, bildirim gönderilmedi.");
     return;
